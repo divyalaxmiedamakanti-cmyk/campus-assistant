@@ -635,6 +635,13 @@ def _seed(conn):
             ("FAC-STU-004", "Dr. Vasu Babu", "Student Affairs", "Dean of Students", "Professional Ethics & Social Values", "dean.students@qiscet.edu.in", "+91 90000 66666", "Student Affairs Room 104", now_iso()),
             ("FAC-MATH-005", "Prof. K. Ramesh", "Humanities & Sciences", "Associate Professor", "Discrete Mathematics & Graph Theory", "ramesh.math@qiscet.edu.in", "+91 90000 77788", "H&S Block Room 102", now_iso()),
             ("FAC-CSE-006", "Dr. S. Lakshmi", "Computer Science & Engineering", "Professor", "Computer Networks & Cyber Security", "lakshmi.cse@qiscet.edu.in", "+91 90000 88899", "CSE Block Room 205", now_iso()),
+            ("FAC-CSM-001", "Bindu", "Computer Science & Machine Learning (CSM)", "Associate Professor", "Machine Learning & Deep Learning", "bindu.csm@qiscet.edu.in", "+91 90000 11101", "CSM Block Room 101", now_iso()),
+            ("FAC-CSM-002", "Koteswar Rao", "Computer Science & Machine Learning (CSM)", "Assistant Professor", "Computer Networks & Protocols", "koteswarrao.csm@qiscet.edu.in", "+91 90000 11102", "CSM Block Room 102", now_iso()),
+            ("FAC-CSM-003", "Nikhil", "Computer Science & Machine Learning (CSM)", "Assistant Professor", "Data Structures & Algorithms", "nikhil.csm@qiscet.edu.in", "+91 90000 11103", "CSM Block Room 103", now_iso()),
+            ("FAC-CSM-004", "Bhaskar Rao", "Computer Science & Machine Learning (CSM)", "Associate Professor", "AI & Expert Systems", "bhaskarrao.csm@qiscet.edu.in", "+91 90000 11104", "CSM Block Room 104", now_iso()),
+            ("FAC-AIDS-001", "Durga", "Artificial Intelligence & Data Science (AIDS)", "Associate Professor", "Artificial Intelligence & Data Mining", "durga.aids@qiscet.edu.in", "+91 90000 22201", "AIDS Block Room 201", now_iso()),
+            ("FAC-AIDS-002", "Srinilai", "Artificial Intelligence & Data Science (AIDS)", "Assistant Professor", "Data Visualization & Analytics", "srinilai.aids@qiscet.edu.in", "+91 90000 22202", "AIDS Block Room 202", now_iso()),
+            ("FAC-AIDS-003", "Rabbani Basha", "Artificial Intelligence & Data Science (AIDS)", "Assistant Professor", "Big Data Analytics & NLP", "rabbanibasha.aids@qiscet.edu.in", "+91 90000 22203", "AIDS Block Room 203", now_iso()),
         ]
         cur.executemany(
             "INSERT INTO faculty_members (faculty_id, faculty_name, department, designation, subject, email, phone, office_room, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
