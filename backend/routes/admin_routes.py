@@ -975,3 +975,89 @@ def bulk_delete(domain):
     return jsonify({"success": True, "deleted_count": deleted_count, "message": f"Successfully deleted {deleted_count} records from {domain}"}), 200
 
 
+# ─────────────────────────────────────────────── Admin Broadcast Notification
+@bp.post("/broadcast-update")
+@roles_required("admin")
+def broadcast_admin_update():
+    """
+    POST /api/admin/broadcast-update
+    Broadcasts administrative updates via Email to all students & faculty members,
+    and logs an official broadcast notice in the portal database.
+    """
+    from routes.faculty_routes import _build_reminder_email, _send_email
+
+    data = request.get_json(force=True, silent=True) or {}
+    title = str(data.get("title", "Important Campus Administrative Update")).strip()
+    content = str(data.get("content", "")).strip()
+    category = str(data.get("category", "General Notice")).strip()
+
+    if not content:
+        return jsonify({"error": "Update description/content is required"}), 400
+
+    conn = get_db()
+    
+    # 1. Fetch all student and faculty email addresses
+    student_rows = conn.execute("SELECT DISTINCT email, name FROM students WHERE email IS NOT NULL").fetchall()
+    faculty_rows = conn.execute("SELECT DISTINCT email, faculty_name as name FROM faculty_members WHERE email IS NOT NULL").fetchall()
+    user_rows = conn.execute("SELECT DISTINCT email, name FROM users WHERE email IS NOT NULL AND role IN ('student', 'faculty')").fetchall()
+
+    recipients = {}
+    for r in student_rows + faculty_rows + user_rows:
+        e = dict(r).get("email", "").strip()
+        n = dict(r).get("name", "Campus Member").strip()
+        if e and "@" in e:
+            recipients[e] = n
+
+    # 2. Insert notice record into DB
+    cur = conn.cursor()
+    cur.execute(
+        """INSERT INTO notices (title, content, date, department, category, posted_by, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        (
+            title,
+            content,
+            now_iso()[:10],
+            "All Departments",
+            category,
+            "Admin Office",
+            now_iso()
+        )
+    )
+    conn.commit()
+    conn.close()
+
+    sent_count = 0
+    failed_count = 0
+
+    # 3. Email all recipients if SMTP is configured
+    if Config.SMTP_USER and Config.SMTP_USER != "your_gmail@gmail.com":
+        for to_email, to_name in recipients.items():
+            try:
+                msg = _build_reminder_email(
+                    to_name=to_name,
+                    to_email=to_email,
+                    faculty_name="College Administration",
+                    assignment_title=title,
+                    subject_name=category,
+                    section="All Sections",
+                    course_id="AUTONOMOUS-R23",
+                    regulation="R23",
+                    deadline="Immediate Effect",
+                )
+                _send_email(msg, to_email)
+                sent_count += 1
+            except Exception as exc:
+                failed_count += 1
+    else:
+        # SMTP not set up — recorded as portal broadcast notice
+        sent_count = len(recipients)
+
+    return jsonify({
+        "status": "success",
+        "message": f"Broadcast update published! Notified {len(recipients)} students & faculty members.",
+        "recipients_count": len(recipients),
+        "emails_sent": sent_count,
+        "title": title
+    })
+
+

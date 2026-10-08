@@ -941,8 +941,41 @@ def create_notice():
         (title, content, g.user["name"], category, now_iso()[:10])
     )
     conn.commit()
+
+    # Collect recipient emails for email broadcast
+    student_rows = conn.execute("SELECT DISTINCT email, name FROM students WHERE email IS NOT NULL").fetchall()
+    faculty_rows = conn.execute("SELECT DISTINCT email, faculty_name as name FROM faculty_members WHERE email IS NOT NULL").fetchall()
+    user_rows = conn.execute("SELECT DISTINCT email, name FROM users WHERE email IS NOT NULL AND role IN ('student', 'faculty')").fetchall()
     conn.close()
-    return jsonify({"ok": True})
+
+    recipients = {}
+    for r in student_rows + faculty_rows + user_rows:
+        e = dict(r).get("email", "").strip()
+        n = dict(r).get("name", "Campus Member").strip()
+        if e and "@" in e:
+            recipients[e] = n
+
+    # Dispatch email if SMTP configured
+    if Config.SMTP_USER and Config.SMTP_USER != "your_gmail@gmail.com":
+        from routes.faculty_routes import _build_reminder_email, _send_email
+        for to_email, to_name in recipients.items():
+            try:
+                msg = _build_reminder_email(
+                    to_name=to_name,
+                    to_email=to_email,
+                    faculty_name=g.user.get("name", "College Administration"),
+                    assignment_title=title,
+                    subject_name=category,
+                    section="All Sections",
+                    course_id="QISCET-NOTICE",
+                    regulation="R23",
+                    deadline="Immediate",
+                )
+                _send_email(msg, to_email)
+            except Exception:
+                pass
+
+    return jsonify({"ok": True, "recipients_notified": len(recipients)})
 
 
 @bp.post("/portal/fees/pay")

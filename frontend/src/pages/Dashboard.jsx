@@ -3507,6 +3507,14 @@ function FacultyStudentsView() {
   const [filterSection, setFilterSection] = useState("All");
   const [filterSubject, setFilterSubject] = useState("All");
 
+  // Parent SMS Modal State
+  const [smsModalOpen, setSmsModalOpen]   = useState(false);
+  const [targetStudent, setTargetStudent] = useState(null);
+  const [smsMessage, setSmsMessage]       = useState("");
+  const [smsPhone, setSmsPhone]           = useState("+91 98480 12345");
+  const [smsStatus, setSmsStatus]         = useState(null);
+  const [sendingSms, setSendingSms]       = useState(false);
+
   const subjects = ["All", "Machine Learning", "Deep Learning Lab", "Neural Networks"];
 
   const filtered = FACULTY_STUDENTS_LIST.filter(s =>
@@ -3517,6 +3525,41 @@ function FacultyStudentsView() {
 
   const lowAttendance = FACULTY_STUDENTS_LIST.filter(s => s.attendance < 75).length;
   const avgCgpa = (FACULTY_STUDENTS_LIST.reduce((a, s) => a + s.cgpa, 0) / FACULTY_STUDENTS_LIST.length).toFixed(2);
+
+  function handleOpenSmsModal(s) {
+    setTargetStudent(s);
+    setSmsPhone("+91 98480 12345");
+    setSmsMessage(`Dear Parent, this is an official update regarding your ward ${s.name} (${s.roll}). Current attendance is ${s.attendance}%. Please ensure regular class attendance.`);
+    setSmsStatus(null);
+    setSmsModalOpen(true);
+  }
+
+  async function handleSendParentSms(e) {
+    e.preventDefault();
+    if (!targetStudent || !smsPhone || !smsMessage || sendingSms) return;
+    setSendingSms(true);
+    try {
+      const resp = await client.post("/faculty/send-parent-sms", {
+        roll_number: targetStudent.roll,
+        student_name: targetStudent.name,
+        parent_phone: smsPhone,
+        message: smsMessage,
+        category: "Attendance Alert"
+      });
+      setSmsStatus({ type: "success", msg: resp.data.message || "Parent SMS dispatched successfully!" });
+      setTimeout(() => {
+        setSmsModalOpen(false);
+      }, 2000);
+    } catch (err) {
+      setSmsStatus({ type: "error", msg: "Failed to dispatch SMS" });
+    } finally {
+      setSendingSms(false);
+    }
+  }
+
+  function handleDownloadReport(roll) {
+    window.open(`/api/faculty/student-report/${roll}`, "_blank");
+  }
 
   return (
     <div className="space-y-5">
@@ -3596,13 +3639,14 @@ function FacultyStudentsView() {
                 <th className="px-5 py-3">Year</th>
                 <th className="px-5 py-3 text-center">CGPA</th>
                 <th className="px-5 py-3 text-center">Attendance</th>
+                <th className="px-5 py-3 text-right">Faculty Actions</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((s, i) => (
                 <tr
                   key={s.roll}
-                  className="border-b border-rule last:border-0 hover:bg-brass/5 row-interactive cursor-pointer transition-colors"
+                  className="border-b border-rule last:border-0 hover:bg-brass/5 row-interactive transition-colors"
                 >
                   <td className="px-5 py-3 font-mono text-xs text-brass font-bold">{s.roll}</td>
                   <td className="px-5 py-3 font-medium text-ink">{s.name}</td>
@@ -3623,11 +3667,27 @@ function FacultyStudentsView() {
                       {s.attendance}%
                     </span>
                   </td>
+                  <td className="px-5 py-3 text-right space-x-1.5">
+                    <button
+                      onClick={() => handleOpenSmsModal(s)}
+                      className="px-2.5 py-1 rounded-lg bg-brass/15 text-brass hover:bg-brass text-xs font-mono font-bold border border-brass/30 transition-all inline-flex items-center gap-1"
+                      title="Send SMS to Parent"
+                    >
+                      📱 Parent SMS
+                    </button>
+                    <button
+                      onClick={() => handleDownloadReport(s.roll)}
+                      className="px-2.5 py-1 rounded-lg bg-paper border border-rule hover:border-brass text-ink-soft hover:text-ink text-xs font-mono font-bold transition-all inline-flex items-center gap-1"
+                      title="Download Comprehensive Student Report"
+                    >
+                      📄 Report
+                    </button>
+                  </td>
                 </tr>
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center text-ink-soft text-xs">
+                  <td colSpan={8} className="px-5 py-10 text-center text-ink-soft text-xs">
                     No students found matching your search or filters.
                   </td>
                 </tr>
@@ -3636,6 +3696,86 @@ function FacultyStudentsView() {
           </table>
         </div>
       </Card>
+
+      {/* Parent SMS Dispatch Modal */}
+      {smsModalOpen && targetStudent && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-paper-raised border border-brass/50 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4"
+          >
+            <div className="flex items-center justify-between border-b border-rule pb-3">
+              <h3 className="font-display font-bold text-lg text-ink flex items-center gap-2">
+                📱 Dispatch Parent SMS Notification
+              </h3>
+              <button onClick={() => setSmsModalOpen(false)} className="text-ink-soft hover:text-ink">
+                ✕
+              </button>
+            </div>
+
+            {smsStatus && (
+              <div
+                className={`p-3 rounded-xl text-xs font-mono ${
+                  smsStatus.type === "success"
+                    ? "bg-success/15 text-success border border-success/30"
+                    : "bg-danger/15 text-danger border border-danger/30"
+                }`}
+              >
+                {smsStatus.msg}
+              </div>
+            )}
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="font-mono text-ink-soft uppercase text-[10px] block mb-1">Student &amp; Roll</label>
+                <div className="font-bold text-ink text-sm bg-canvas p-2.5 rounded-xl border border-rule">
+                  {targetStudent.name} ({targetStudent.roll}) · Section {targetStudent.section}
+                </div>
+              </div>
+
+              <div>
+                <label className="font-mono text-ink-soft uppercase text-[10px] block mb-1">Parent Phone Number</label>
+                <input
+                  type="text"
+                  value={smsPhone}
+                  onChange={(e) => setSmsPhone(e.target.value)}
+                  className="w-full bg-canvas border border-rule rounded-xl px-3 py-2 text-ink font-mono outline-none focus:border-brass"
+                />
+              </div>
+
+              <div>
+                <label className="font-mono text-ink-soft uppercase text-[10px] block mb-1">SMS Content Message</label>
+                <textarea
+                  rows={4}
+                  value={smsMessage}
+                  onChange={(e) => setSmsMessage(e.target.value)}
+                  className="w-full bg-canvas border border-rule rounded-xl p-3 text-ink font-body outline-none focus:border-brass"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setSmsModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-paper border border-rule text-xs font-mono text-ink-soft hover:text-ink"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={sendingSms}
+                onClick={handleSendParentSms}
+                className="px-5 py-2 rounded-xl bg-brass text-paper hover:bg-brass-light text-xs font-mono font-bold shadow-md"
+              >
+                {sendingSms ? "Sending SMS..." : "Send SMS Now"}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center text-xs font-mono text-ink-soft/60 px-1">
         <span>Showing {filtered.length} of {FACULTY_STUDENTS_LIST.length} assigned students</span>
         <span>Sections: AIML-2 (50) · CSDS-3 (50) · CSE-5 (50)</span>
