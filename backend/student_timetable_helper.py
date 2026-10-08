@@ -392,24 +392,26 @@ def query_timetable(parsed: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
 
 def _format_single_day_result(section: str, day: str, rows: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Formats a single day's schedule for a section into cards and markdown boxes."""
+    """Formats a single day's schedule for a section into cards and a clean Markdown Grid Table."""
     cards_data = []
-    text_boxes = []
 
     title = f"{section} — {day} Class Schedule"
-    text_boxes.append(f"### 📅 **{title}**")
-    text_boxes.append(f"**Total Periods:** {len(rows)} | **Section:** {section} | **Day:** {day}\n")
+    markdown_lines = [
+        f"### 📅 **{title}**",
+        f"**Section:** {section} | **Day:** {day} | **Total Periods:** {len(rows)}\n",
+        "| Period | Time | Subject | Type | Faculty | Room / Venue | Batch Info |",
+        "| :--- | :--- | :--- | :--- | :--- | :--- | :--- |"
+    ]
 
     for r in rows:
         p_no = r["period_no"]
         time = r["period_time"]
         subj = r["subject"]
-        fac = _clean_val(r["faculty"], "Faculty not assigned")
-        rm = _clean_val(r["room"], "Classroom TBA")
+        fac = _clean_val(r["faculty"], "Assigned Faculty")
+        rm = _clean_val(r["room"], "Classroom")
         stype = r["subject_type"] or "Theory"
-        batch = _clean_val(r["batch_info"], "")
+        batch = _clean_val(r["batch_info"], "All Batches")
 
-        # Card entry for UI
         cards_data.append({
             "period_no": p_no,
             "period_time": time,
@@ -422,18 +424,9 @@ def _format_single_day_result(section: str, day: str, rows: List[Dict[str, Any]]
             "day": day
         })
 
-        # Clean Box formatting for text
-        batch_line = f"\n│ 👥 Batch: {batch}" if batch else ""
-        text_boxes.append(
-            f"┌────────────────────────────────────────────────────────┐\n"
-            f"│ 🕒 **Period {p_no}** ({time}) • 🏷️ **{stype}**\n"
-            f"│ 📖 **Subject:** {subj}\n"
-            f"│ 👨‍🏫 **Faculty:** {fac}\n"
-            f"│ 📍 **Room / Hall:** {rm}{batch_line}\n"
-            f"└────────────────────────────────────────────────────────┘"
-        )
+        markdown_lines.append(f"| Period {p_no} | {time} | **{subj}** | {stype} | {fac} | {rm} | {batch} |")
 
-    answer_text = "\n".join(text_boxes)
+    answer_text = "\n".join(markdown_lines)
 
     return {
         "view_type": "single_day",
@@ -452,7 +445,7 @@ def _format_single_day_result(section: str, day: str, rows: List[Dict[str, Any]]
 
 
 def _format_full_section_result(section: str, rows: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Formats full weekly timetable for a section into grouped days and markdown boxes."""
+    """Formats full weekly timetable for a section into Markdown Grid Tables."""
     days_grouped = {}
     for r in rows:
         d = r["day_of_week"]
@@ -461,15 +454,19 @@ def _format_full_section_result(section: str, rows: List[Dict[str, Any]]) -> Dic
         days_grouped[d].append(r)
 
     title = f"{section} — Complete Weekly Timetable"
-    text_boxes = [f"### 📚 **{title}**"]
-    text_boxes.append(f"**Section:** {section} | **Weekly Periods:** {len(rows)} | **Days:** Monday to Saturday\n")
+    text_lines = [
+        f"### 📚 **{title}**",
+        f"**Section:** {section} | **Weekly Periods:** {len(rows)} | **Days:** Monday to Saturday\n"
+    ]
     cards_grouped = []
 
     for day in DAYS_ORDER:
         if day not in days_grouped:
             continue
         day_rows = days_grouped[day]
-        text_boxes.append(f"#### 🗓️ **{day}** ({len(day_rows)} Periods)")
+        text_lines.append(f"#### 🗓️ **{day} Schedule** ({len(day_rows)} Periods)")
+        text_lines.append("| Period | Time | Subject | Type | Faculty | Room / Venue | Batch Info |")
+        text_lines.append("| :--- | :--- | :--- | :--- | :--- | :--- | :--- |")
 
         day_cards = []
         for r in day_rows:
@@ -479,7 +476,7 @@ def _format_full_section_result(section: str, rows: List[Dict[str, Any]]) -> Dic
             fac = _clean_val(r["faculty"], "Staff")
             rm = _clean_val(r["room"], "Classroom")
             stype = r["subject_type"] or "Theory"
-            batch = _clean_val(r["batch_info"], "")
+            batch = _clean_val(r["batch_info"], "All Batches")
 
             day_cards.append({
                 "period_no": p_no,
@@ -493,15 +490,9 @@ def _format_full_section_result(section: str, rows: List[Dict[str, Any]]) -> Dic
                 "day": day
             })
 
-            batch_str = f" • 👥 {batch}" if batch else ""
-            text_boxes.append(
-                f"┌────────────────────────────────────────────────────────┐\n"
-                f"│ 🕒 **Period {p_no}** ({time}) • 🏷️ {stype}\n"
-                f"│ 📖 **Subject:** {subj}\n"
-                f"│ 👨‍🏫 **Faculty:** {fac}  •  📍 **Room:** {rm}{batch_str}\n"
-                f"└────────────────────────────────────────────────────────┘"
-            )
-        text_boxes.append("")
+            text_lines.append(f"| Period {p_no} | {time} | **{subj}** | {stype} | {fac} | {rm} | {batch} |")
+
+        text_lines.append("")
 
         cards_grouped.append({
             "day": day,
@@ -514,12 +505,12 @@ def _format_full_section_result(section: str, rows: List[Dict[str, Any]]) -> Dic
         "title": title,
         "section": section,
         "cards": cards_grouped,
-        "markdown_answer": "\n".join(text_boxes)
+        "markdown_answer": "\n".join(text_lines)
     }
 
 
 def _format_branch_result(branch: str, rows: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Formats full weekly timetable for all sections within a specific branch."""
+    """Formats full weekly timetable for all sections within a specific branch into Grid Tables."""
     sections_grouped = {}
     for r in rows:
         sec = r["section"]
@@ -547,15 +538,19 @@ def _format_branch_result(branch: str, rows: List[Dict[str, Any]]) -> Dict[str, 
 
 
 def _format_subject_result(subject: str, rows: List[Dict[str, Any]], section_filter: Optional[str] = None, day_filter: Optional[str] = None) -> Dict[str, Any]:
-    """Formats subject timing & room search result into structured boxes."""
+    """Formats subject timing & room search result into Markdown Grid Table."""
     title = f"Class Timings & Rooms for {subject}"
     if section_filter:
         title += f" ({section_filter})"
     if day_filter:
         title += f" on {day_filter}"
 
-    text_boxes = [f"### 🔍 **{title}**"]
-    text_boxes.append(f"**Found {len(rows)} scheduled sessions:**\n")
+    text_lines = [
+        f"### 🔍 **{title}**",
+        f"**Found {len(rows)} scheduled sessions:**\n",
+        "| Section | Day | Period | Time | Subject | Type | Faculty | Room / Venue |",
+        "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |"
+    ]
     cards_data = []
 
     for r in rows:
@@ -579,14 +574,14 @@ def _format_subject_result(subject: str, rows: List[Dict[str, Any]], section_fil
             "subject_type": stype
         })
 
-        text_boxes.append(
-            f"┌────────────────────────────────────────────────────────┐\n"
-            f"│ 🏷️ **{sec}** • 🗓️ **{day}** • 🕒 **Period {p_no}** ({time})\n"
-            f"│ 📖 **Subject:** {subj} ({stype})\n"
-            f"│ 📍 **Room / Mode:** {rm}\n"
-            f"│ 👨‍🏫 **Faculty:** {fac}\n"
-            f"└────────────────────────────────────────────────────────┘"
-        )
+        text_lines.append(f"| **{sec}** | {day} | Period {p_no} | {time} | **{subj}** | {stype} | {fac} | {rm} |")
+
+    return {
+        "view_type": "subject_search",
+        "title": title,
+        "cards": cards_data,
+        "markdown_answer": "\n".join(text_lines)
+    }
 
     # Group cards by section and day
     grouped = {}

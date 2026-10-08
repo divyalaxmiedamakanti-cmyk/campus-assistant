@@ -372,52 +372,49 @@ def get_live_faculty_status(faculty: dict, current_dt: datetime = None):
 
 
 def format_all_faculty_live_status():
-    """Returns a consolidated text summary of all faculty members' current locations."""
+    """Returns a consolidated Markdown Grid Table of all faculty members' current locations."""
     now = get_current_ist_time()
     day_name = now.strftime("%A")
     time_str = now.strftime("%I:%M %p")
 
     lines = [
-        f"📍 **QISCET Faculty Live Locations & Schedules** (Current IST Time: {day_name}, {time_str}):\n"
+        f"### 📍 **QISCET Faculty Live Locations & Status** ({day_name}, {time_str} IST)\n",
+        "| Faculty Name | Department | Current Status / Period | Location / Room | Office Cabin | Contact Phone |",
+        "| :--- | :--- | :--- | :--- | :--- | :--- |"
     ]
 
     for f in FACULTY_MASTER_DIRECTORY:
         st = get_live_faculty_status(f, now)
         if st["current_class"]:
             cls = st["current_class"]
-            lines.append(
-                f"• **{f['name']}** ({f['designation']}, {f['department']}):\n"
-                f"  - **Current Location**: 🔴 IN CLASS at **{cls['room']}**\n"
-                f"  - **Subject & Section**: {cls['subject']} for Section {cls['section']} ({cls['start']}–{cls['end']})\n"
-                f"  - **Office Cabin**: {f['cabin']} | Phone: {f['phone']}\n"
-            )
+            status_text = f"🔴 In Class ({cls['subject']} - {cls['section']})"
+            loc_text = cls['room']
         else:
-            next_info = f"Next class at {st['next_class']['start']} in {st['next_class']['room']}" if st["next_class"] else "No further classes today"
-            lines.append(
-                f"• **{f['name']}** ({f['designation']}, {f['department']}):\n"
-                f"  - **Current Location**: 🟢 {st['status']} at **{st['location']}**\n"
-                f"  - **Next Class**: {next_info}\n"
-                f"  - **Office Cabin**: {f['cabin']} | Phone: {f['phone']}\n"
-            )
+            status_text = f"🟢 {st['status']}"
+            loc_text = st['location']
+
+        lines.append(f"| **{f['name']}** | {f['department']} | {status_text} | {loc_text} | {f['cabin']} | {f['phone']} |")
 
     return "\n".join(lines)
 
 
 def get_faculty_timetable_context(faculty_name: str = None):
-    """Returns full weekly timetable for a given faculty or all faculty."""
-    lines = ["📅 **QIS College of Engineering and Technology - Faculty Weekly Timetables (R23 Scheme)**:"]
-
+    """Returns full weekly timetable for a given faculty or all faculty in Markdown Grid Table format."""
     target_list = [f for f in FACULTY_MASTER_DIRECTORY if faculty_name.lower() in f["name"].lower()] if faculty_name else FACULTY_MASTER_DIRECTORY
 
+    lines = ["### 📅 **Faculty Weekly Period Timetable (R23 Scheme)**\n"]
+
     for f in target_list:
-        lines.append(f"\n### {f['name']} ({f['designation']} - {f['department']})")
-        lines.append(f"- **Cabin / Office**: {f['cabin']}")
-        lines.append(f"- **Contact**: Email `{f['email']}`, Phone `{f['phone']}`")
-        lines.append(f"- **Designated Online Day**: {f['online_day']}")
-        lines.append(f"- **Subjects Taught**: {', '.join(f['subjects'])}")
-        lines.append("Weekly Schedule:")
+        lines.append(f"#### 👨‍🏫 **{f['name']}** ({f['designation']} — {f['department']})")
+        lines.append(f"**Cabin:** {f['cabin']} | **Online Day:** {f['online_day']} | **Contact:** `{f['email']}` ({f['phone']})\n")
+        lines.append("| Day | Start Time | End Time | Subject | Section | Room / Mode | Online |")
+        lines.append("| :--- | :--- | :--- | :--- | :--- | :--- | :--- |")
+
         for day, periods in f["timetable"].items():
-            periods_str = ", ".join(f"{p['start']}–{p['end']}: {p['subject']} ({p['section']}, {p['room']})" for p in periods)
-            lines.append(f"  * **{day}**: {periods_str}")
+            for p in periods:
+                online_str = "Yes (Online)" if p.get("online") else "No (Offline)"
+                lines.append(f"| {day} | {p['start']} | {p['end']} | **{p['subject']}** | {p['section']} | {p['room']} | {online_str} |")
+
+        lines.append("")
 
     return "\n".join(lines)
