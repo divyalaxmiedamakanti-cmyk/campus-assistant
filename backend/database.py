@@ -857,20 +857,12 @@ def _seed(conn):
 
     # --- Seed student timetable (Timetable module) ---
     cur.execute("SELECT COUNT(*) c FROM student_timetable")
-    if cur.fetchone()["c"] == 0:
-        tt_seed = [
-            ("Monday", "Monday", "Period 1 (09:00 - 10:00 AM)", 1, "09:00 - 10:00 AM", "Machine Learning", "23AI501", "Dr. Vara Prasad", "LH-201", "CSE-A", "CSE", "Computer Science & Engineering", "3-1", "3rd Year - 1st Sem", "All Batches", "Theory"),
-            ("Monday", "Monday", "Period 2 (10:00 - 11:00 AM)", 2, "10:00 - 11:00 AM", "Operating Systems", "23CS502", "Dr. Bujji Babu", "LH-201", "CSE-A", "CSE", "Computer Science & Engineering", "3-1", "3rd Year - 1st Sem", "All Batches", "Theory"),
-            ("Tuesday", "Tuesday", "Period 1 (09:00 - 10:00 AM)", 1, "09:00 - 10:00 AM", "Database Management Systems", "23CS503", "Dr. Challaram", "LH-201", "CSE-A", "CSE", "Computer Science & Engineering", "3-1", "3rd Year - 1st Sem", "All Batches", "Theory"),
-            ("Tuesday", "Tuesday", "Period 3 (11:15 AM - 01:15 PM)", 3, "11:15 AM - 01:15 PM", "Deep Learning Lab", "23DS602", "Dr. Vara Prasad", "Lab 3", "CSE-A", "CSE", "Computer Science & Engineering", "3-1", "3rd Year - 1st Sem", "Batch B1 & B2", "Lab"),
-            ("Wednesday", "Wednesday", "Period 2 (10:00 - 11:00 AM)", 2, "10:00 - 11:00 AM", "Discrete Mathematics", "23MA501", "Prof. K. Ramesh", "LH-201", "CSE-A", "CSE", "Computer Science & Engineering", "3-1", "3rd Year - 1st Sem", "All Batches", "Theory"),
-            ("Thursday", "Thursday", "Period 1 (09:00 - 10:00 AM)", 1, "09:00 - 10:00 AM", "Machine Learning", "23AI501", "Dr. Vara Prasad", "LH-201", "CSE-A", "CSE", "Computer Science & Engineering", "3-1", "3rd Year - 1st Sem", "All Batches", "Theory"),
-            ("Friday", "Friday", "Period 2 (10:00 - 11:00 AM)", 2, "10:00 - 11:00 AM", "Computer Networks", "23CS504", "Dr. S. Lakshmi", "LH-201", "CSE-A", "CSE", "Computer Science & Engineering", "3-1", "3rd Year - 1st Sem", "All Batches", "Theory"),
-        ]
-        cur.executemany(
-            "INSERT INTO student_timetable (day, day_of_week, period, period_no, period_time, subject, subject_code, faculty, room, section, branch, department, year, year_semester, batch_info, subject_type) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-            tt_seed
-        )
+    if cur.fetchone()["c"] <= 7:
+        try:
+            from insert_timetable import insert_timetable
+            insert_timetable()
+        except Exception as e:
+            print(f"Notice seeding full timetable: {e}")
 
     # --- Seed staff accounts for CFRO, CFSS, Student Dean ---
     staff_accounts = [

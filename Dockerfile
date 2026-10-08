@@ -29,8 +29,9 @@ COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
 WORKDIR /app/backend
 
-# Initialize SQLite database with seed data
+# Initialize SQLite database with seed data and full timetables
 RUN python database.py
+RUN python insert_timetable.py
 
 # Expose default port (7860 for Hugging Face Spaces / 5000 for standard)
 ENV PORT=7860
