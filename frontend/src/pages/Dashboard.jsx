@@ -57,6 +57,7 @@ import CfroSection from "../components/cfro/CfroSection.jsx";
 import CfssSection from "../components/cfss/CfssSection.jsx";
 import client from "../api/client.js";
 import { useAuth } from "../context/AuthContext.jsx";
+import SmartSearch from "../components/SmartSearch.jsx";
 import { FACULTY_SECTIONS, FACULTY_STUDENTS_LIST, COURSE_SYLLABUS } from "../data/facultyStudents.js";
 
 const SECTION_ICON = {
@@ -1836,6 +1837,21 @@ function FacultyTimetableView({ user }) {
 
   return (
     <div className="space-y-6">
+      {/* Faculty Smart Search Bar */}
+      <div className="p-4 rounded-2xl bg-paper-raised border border-brass/30 shadow-sm relative">
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <span className="font-mono text-[11px] uppercase tracking-wider text-brass font-bold flex items-center gap-1.5">
+            <Sparkles size={14} className="text-brass" />
+            Faculty Smart AI Search
+          </span>
+          <span className="text-[10px] font-mono text-ink-soft/70">Autocompletes subjects, topics &amp; schedules</span>
+        </div>
+        <SmartSearch
+          placeholder="Search Python, Machine Learning, Neural Networks, Supervised Learning, cabins…"
+          compact={false}
+        />
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
